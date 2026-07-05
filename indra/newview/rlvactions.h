@@ -140,7 +140,7 @@ public:
     enum EShowNamesContext { SNC_DEFAULT = 0, SNC_TELEPORTOFFER, SNC_TELEPORTREQUEST, SNC_COUNT };
     static bool canShowName(EShowNamesContext eContext, const LLUUID& idAgent = LLUUID::null);
     static bool canShowNameTag(const LLVOAvatar* pAvatar);
-    static bool canShowNearbyAgents();
+
     static void setShowName(EShowNamesContext eContext, bool fCanShowName) { if ( (eContext < SNC_COUNT) && (isRlvEnabled()) ) { s_BlockNamesContexts[eContext] = !fCanShowName; } }
 
     /*
