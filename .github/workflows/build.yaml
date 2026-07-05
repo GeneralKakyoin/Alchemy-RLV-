@@ -23,7 +23,7 @@ on:
         default: "hippo"
   pull_request:
   push:
-    branches: ["main", "release/*", "beta/*", "project/*"]
+    branches: ["main", "release/*", "beta/*", "project/*", "v2"]
     tags: ["Alchemy*"]
 
 permissions:
