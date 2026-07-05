@@ -138,7 +138,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        runner: ["windows-2025-vs2026", "macos-26", "ubuntu-24.04"]
+        runner: ["windows-2025-vs2026"]
         configuration: [release]
         arch: [x64, arm64]
         build_variant: [Viewer, Tests]
@@ -713,10 +713,6 @@ jobs:
         with:
           pattern: "*-releases"
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: "Linux-x64-app"
-
       # forked from softprops/action-gh-release
       - name: Create GitHub release
         id: release
@@ -732,7 +728,6 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             Windows-installer/*.exe
-            *.tar.xz
             Windows-releases/*
 
       - name: post release URL
