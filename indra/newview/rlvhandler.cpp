@@ -2889,7 +2889,7 @@ void RlvBehaviourToggleHandler<RLV_BHVR_SHOWNEARBY>::onCommandToggle(ERlvBehavio
         if (pNearbyList->isInVisibleChain())
             pPeoplePanel->onCommit();
         if (!fHasBhvr)
-            pPeoplePanel->updateNearbyList();
+            pPeoplePanel->rlvUpdateNearbyList();
     }
 
 #ifdef CATZNIP

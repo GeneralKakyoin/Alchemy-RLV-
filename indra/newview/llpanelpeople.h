@@ -61,6 +61,7 @@ public:
 
 // [RLVa:KB] - Checked: RLVa-1.2.0
     LLAvatarList* getNearbyList() { return mNearbyList; }
+    void          rlvUpdateNearbyList() { updateNearbyList(); }
     void          rlvUpdateTabStates();
     LLAvatarList* getOnlineFriendList() { return mOnlineFriendList; }
     LLAvatarList* getAllFriendList() { return mAllFriendList; }
