@@ -105,7 +105,8 @@ void LLFloaterEstim::updateCommandList()
     }
 
     // Auto-scroll to the bottom
-    mCommandList->selectNthRow(log.empty() ? 0 : log.size() - 1);
+    mCommandList->selectNthItem(log.empty() ? 0 : (S32)log.size() - 1);
+    mCommandList->scrollToShowSelected();
 }
 
 void LLFloaterEstim::drawGraph()
