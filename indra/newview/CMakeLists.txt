@@ -253,6 +253,8 @@ set(viewer_SOURCE_FILES
     llbrowsernotification.cpp
     llbuycurrencyhtml.cpp
     llcallingcard.cpp
+    llcefaccelinterop.cpp
+    llcefsurfacereceiver.cpp
     llchannelmanager.cpp
     #llchatbar.cpp
     llchathistory.cpp
@@ -1024,6 +1026,8 @@ set(viewer_HEADER_FILES
     llbuycurrencyhtml.h
     llcallingcard.h
     llcapabilityprovider.h
+    llcefaccelinterop.h
+    llcefsurfacereceiver.h
     llchannelmanager.h
     #llchatbar.h
     llchathistory.h

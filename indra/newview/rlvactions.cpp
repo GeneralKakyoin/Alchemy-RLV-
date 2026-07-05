@@ -262,6 +262,11 @@ bool RlvActions::canShowNameTag(const LLVOAvatar* pAvatar)
     return (nShowNameTagsDist != 0.f) && (dist_vec_squared(pAvatar->getPositionGlobal(), gAgent.getPositionGlobal()) < nShowNameTagsDist * nShowNameTagsDist);
 }
 
+bool RlvActions::canShowNearbyAgents()
+{
+    return !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNEARBY);
+}
+
 // Handles: @chatwhisper, @chatnormal and @chatshout
 EChatType RlvActions::checkChatVolume(EChatType chatType)
 {
