@@ -139,6 +139,7 @@ enum ERlvBehaviour {
     RLV_BHVR_SHOWLOC,               // "showloc"
     RLV_BHVR_SHOWNAMES,             // "shownames"
     RLV_BHVR_SHOWNAMETAGS,          // "shownametags"
+    RLV_BHVR_SHOWNEARBY,
     RLV_BHVR_SHOWFRIENDS,
     RLV_BHVR_SHOWPROFILES,
     RLV_BHVR_SHOWDEVELOP,

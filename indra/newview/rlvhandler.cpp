@@ -2869,6 +2869,44 @@ void RlvBehaviourToggleHandler<RLV_BHVR_HIDEUI>::onCommandToggle(ERlvBehaviour e
     }
 }
 
+// Handles: @shownearby=n|y toggles
+template<> template<>
+void RlvBehaviourToggleHandler<RLV_BHVR_SHOWNEARBY>::onCommandToggle(ERlvBehaviour eBhvr, bool fHasBhvr)
+{
+    if (LLApp::isExiting())
+        return; // Nothing to do if the viewer is shutting down
+
+    // Refresh the nearby people list
+    LLPanelPeople* pPeoplePanel = LLFloaterSidePanelContainer::getPanel<LLPanelPeople>("people", "panel_people");
+    LLAvatarList* pNearbyList = (pPeoplePanel) ? pPeoplePanel->getNearbyList() : NULL;
+    RLV_ASSERT( (pPeoplePanel) && (pNearbyList) );
+    if (pNearbyList)
+    {
+        static std::string s_strNoItemsMsg = pNearbyList->getNoItemsMsg();
+        pNearbyList->setNoItemsMsg( (fHasBhvr) ? RlvStrings::getString("blocked_nearby") : s_strNoItemsMsg );
+        pNearbyList->clear();
+
+        if (pNearbyList->isInVisibleChain())
+            pPeoplePanel->onCommit();
+        if (!fHasBhvr)
+            pPeoplePanel->updateNearbyList();
+    }
+
+#ifdef CATZNIP
+    // Refresh the nearby participant list
+    if (LLFloaterIMNearbyChat* pNearbyChatFloater = LLFloaterReg::findTypedInstance<LLFloaterIMNearbyChat>("nearby_chat"))
+    {
+
+        pNearbyChatFloater->updateShowParticipantList();
+        pNearbyChatFloater->updateExpandCollapseBtn();
+        // *TODO - Solution for CHUI
+    }
+#endif // CATZNIP
+
+    // Refresh that avatar's name tag and all HUD text
+    LLHUDText::refreshAllObjectText();
+}
+
 // Handles: @showself=n|y and @showselfhead=n|y toggles
 template<> template<>
 void RlvBehaviourShowSelfToggleHandler::onCommandToggle(ERlvBehaviour eBvhr, bool fHasBhvr)
