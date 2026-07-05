@@ -9,7 +9,8 @@
 #include "llbutton.h"
 #include "lltextbox.h"
 #include "llscrolllistctrl.h"
-#include "llsliderctrl.h"
+#include "llrender.h"
+#include "llui.h"
 
 LLFloaterEstim::LLFloaterEstim(const LLSD& key)
     : LLFloater(key)
@@ -18,31 +19,12 @@ LLFloaterEstim::LLFloaterEstim(const LLSD& key)
 
 bool LLFloaterEstim::postBuild()
 {
-    mTriggerList = getChild<LLScrollListCtrl>("trigger_list");
-    mSensorList = getChild<LLScrollListCtrl>("sensor_list");
+    mCommandList = getChild<LLScrollListCtrl>("command_log");
 
     LLButton* panic_btn = getChild<LLButton>("panic_button");
-    if (panic_btn) panic_btn->setCommitCallback(boost::bind(&LLFloaterEstim::onPanicPressed, this));
-
-    LLButton* test_a_btn = getChild<LLButton>("test_a_btn");
-    if (test_a_btn) test_a_btn->setCommitCallback(boost::bind(&LLFloaterEstim::onTestAPressed, this));
-
-    LLButton* test_b_btn = getChild<LLButton>("test_b_btn");
-    if (test_b_btn) test_b_btn->setCommitCallback(boost::bind(&LLFloaterEstim::onTestBPressed, this));
-
-    LLButton* clear_btn = getChild<LLButton>("clear_btn");
-    if (clear_btn) clear_btn->setCommitCallback(boost::bind(&LLFloaterEstim::onClearTriggersPressed, this));
-
-    LLSliderCtrl* slider_a = getChild<LLSliderCtrl>("max_a_slider");
-    if (slider_a) slider_a->setCommitCallback(boost::bind(&LLFloaterEstim::onSliderAModified, this, _1));
-
-    LLSliderCtrl* slider_b = getChild<LLSliderCtrl>("max_b_slider");
-    if (slider_b) slider_b->setCommitCallback(boost::bind(&LLFloaterEstim::onSliderBModified, this, _1));
-
-    if (auto server = LLEstimWSServer::getInstance())
+    if (panic_btn)
     {
-        if (slider_a) slider_a->setValue((F32)server->getMaxIntensityA());
-        if (slider_b) slider_b->setValue((F32)server->getMaxIntensityB());
+        panic_btn->setCommitCallback(boost::bind(&LLFloaterEstim::onPanicPressed, this));
     }
 
     return true;
@@ -53,47 +35,6 @@ void LLFloaterEstim::onPanicPressed()
     if (auto server = LLEstimWSServer::getInstance())
     {
         server->panicStop();
-    }
-}
-
-void LLFloaterEstim::onTestAPressed()
-{
-    if (auto server = LLEstimWSServer::getInstance())
-    {
-        server->testChannelA();
-    }
-}
-
-void LLFloaterEstim::onTestBPressed()
-{
-    if (auto server = LLEstimWSServer::getInstance())
-    {
-        server->testChannelB();
-    }
-}
-
-void LLFloaterEstim::onClearTriggersPressed()
-{
-    if (auto server = LLEstimWSServer::getInstance())
-    {
-        server->clearTriggers();
-        updateTriggerList();
-    }
-}
-
-void LLFloaterEstim::onSliderAModified(LLUICtrl* ctrl)
-{
-    if (auto server = LLEstimWSServer::getInstance())
-    {
-        server->setMaxIntensityA((U32)ctrl->getValue().asInteger());
-    }
-}
-
-void LLFloaterEstim::onSliderBModified(LLUICtrl* ctrl)
-{
-    if (auto server = LLEstimWSServer::getInstance())
-    {
-        server->setMaxIntensityB((U32)ctrl->getValue().asInteger());
     }
 }
 
@@ -119,25 +60,28 @@ void LLFloaterEstim::draw()
         battery_txt->setText(LLStringExplicit("Coyote Battery: " + std::to_string((int)server->getCoyoteBattery()) + "%"));
     }
 
-    LLTextBox* load_a_txt = getChild<LLTextBox>("load_a_label");
-    if (load_a_txt)
+    updateCommandList();
+
+    // Record power history for graphing
+    U32 valA = server->getChannelAIntensity();
+    U32 valB = server->getChannelBIntensity();
+    
+    mPowerHistoryA.push_back(valA);
+    mPowerHistoryB.push_back(valB);
+    
+    // Cap history length to 300 points
+    while (mPowerHistoryA.size() > 300)
     {
-        load_a_txt->setText(LLStringExplicit(server->getLoadA() ? "Channel A Load: Connected" : "Channel A Load: Disconnected"));
+        mPowerHistoryA.erase(mPowerHistoryA.begin());
+        mPowerHistoryB.erase(mPowerHistoryB.begin());
     }
 
-    LLTextBox* load_b_txt = getChild<LLTextBox>("load_b_label");
-    if (load_b_txt)
-    {
-        load_b_txt->setText(LLStringExplicit(server->getLoadB() ? "Channel B Load: Connected" : "Channel B Load: Disconnected"));
-    }
-
-    updateTriggerList();
-    updateSensorList();
+    drawGraph();
 }
 
-void LLFloaterEstim::updateTriggerList()
+void LLFloaterEstim::updateCommandList()
 {
-    if (!mTriggerList)
+    if (!mCommandList)
     {
         return;
     }
@@ -148,72 +92,75 @@ void LLFloaterEstim::updateTriggerList()
         return;
     }
 
-    mTriggerList->clearRows();
+    const auto& log = server->getCommandLog();
+    mCommandList->clearRows();
 
-    const auto& triggers = server->getTriggers();
-    for (const auto& rule : triggers)
+    for (const auto& cmd : log)
     {
         LLSD element;
-        element["columns"][0]["column"] = "rule";
+        element["columns"][0]["column"] = "command";
         element["columns"][0]["type"]   = "text";
-        element["columns"][0]["value"]  = rule.sensor + "." + rule.axis + " " + rule.op + " " + std::to_string((int)rule.threshold) + " -> " + rule.action;
-        mTriggerList->addElement(element);
+        element["columns"][0]["value"]  = cmd;
+        mCommandList->addElement(element);
     }
+
+    // Auto-scroll to the bottom
+    mCommandList->selectNthRow(log.empty() ? 0 : log.size() - 1);
 }
 
-void LLFloaterEstim::updateSensorList()
+void LLFloaterEstim::drawGraph()
 {
-    if (!mSensorList)
+    // The graph area corresponds to top=245 to 345 in a 420-height floater.
+    // Local draw coordinates (y is 0 at the bottom of the floater):
+    // height = 420.
+    // Graph area: bottom = 420 - 345 = 75, top = 420 - 245 = 175.
+    // Width: left = 10, right = 330.
+    LLRect graph_rect(10, 175, 330, 75);
+
+    // Draw background
+    gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
+    gGL.color4f(0.02f, 0.02f, 0.02f, 0.9f);
+    gl_rect_2d(graph_rect, true);
+
+    // Draw border
+    gGL.color4f(0.25f, 0.25f, 0.25f, 1.0f);
+    gl_rect_2d(graph_rect, false);
+
+    // Draw grid line (horizontal 50% line)
+    gGL.color4f(0.12f, 0.12f, 0.12f, 0.6f);
+    gGL.begin(LLRender::LINES);
+        gGL.vertex2i(graph_rect.mLeft, graph_rect.mBottom + 50);
+        gGL.vertex2i(graph_rect.mRight, graph_rect.mBottom + 50);
+    gGL.end();
+
+    if (mPowerHistoryA.empty())
     {
         return;
     }
 
-    auto server = LLEstimWSServer::getInstance();
-    if (!server)
+    F32 width = (F32)graph_rect.getWidth();
+    F32 height = (F32)graph_rect.getHeight();
+    F32 x_scale = width / 300.0f; // Max 300 history points
+
+    // Draw Channel A (Cyan)
+    gGL.color4f(0.0f, 0.85f, 0.85f, 1.0f); // Sleek cyan
+    gGL.begin(LLRender::LINE_STRIP);
+    for (size_t i = 0; i < mPowerHistoryA.size(); ++i)
     {
-        return;
+        F32 x = graph_rect.mLeft + (F32)i * x_scale;
+        F32 y = graph_rect.mBottom + ((F32)mPowerHistoryA[i] / 255.0f) * height;
+        gGL.vertex2f(x, y);
     }
+    gGL.end();
 
-    mSensorList->clearRows();
-
-    const auto& sensor_values = server->getSensorValues();
-    for (const auto& sensor_pair : sensor_values)
+    // Draw Channel B (Magenta)
+    gGL.color4f(0.9f, 0.0f, 0.9f, 1.0f); // Sleek magenta
+    gGL.begin(LLRender::LINE_STRIP);
+    for (size_t i = 0; i < mPowerHistoryB.size(); ++i)
     {
-        const std::string& sensor_name = sensor_pair.first;
-        const auto& axes = sensor_pair.second;
-
-        std::string val_str = "";
-        for (const auto& axis_pair : axes)
-        {
-            if (!val_str.empty())
-            {
-                val_str += ", ";
-            }
-            if (axis_pair.first == "button")
-            {
-                val_str += "Button: " + std::string(axis_pair.second > 0 ? "Pressed" : "Released");
-            }
-            else if (axis_pair.first == "accel")
-            {
-                val_str += "Accel: " + llformat("%.1f", axis_pair.second);
-            }
-            else
-            {
-                std::string axis_name = axis_pair.first;
-                if (!axis_name.empty()) axis_name[0] = std::toupper(axis_name[0]);
-                val_str += axis_name + ": " + llformat("%.1f", axis_pair.second);
-            }
-        }
-
-        LLSD element;
-        element["columns"][0]["column"] = "sensor";
-        element["columns"][0]["type"]   = "text";
-        element["columns"][0]["value"]  = sensor_name;
-
-        element["columns"][1]["column"] = "values";
-        element["columns"][1]["type"]   = "text";
-        element["columns"][1]["value"]  = val_str;
-
-        mSensorList->addElement(element);
+        F32 x = graph_rect.mLeft + (F32)i * x_scale;
+        F32 y = graph_rect.mBottom + ((F32)mPowerHistoryB[i] / 255.0f) * height;
+        gGL.vertex2f(x, y);
     }
+    gGL.end();
 }

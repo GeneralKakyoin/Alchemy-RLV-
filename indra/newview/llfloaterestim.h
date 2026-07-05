@@ -19,14 +19,10 @@ public:
 
 private:
     void onPanicPressed();
-    void onTestAPressed();
-    void onTestBPressed();
-    void onClearTriggersPressed();
-    void onSliderAModified(LLUICtrl* ctrl);
-    void onSliderBModified(LLUICtrl* ctrl);
-    void updateTriggerList();
-    void updateSensorList();
+    void updateCommandList();
+    void drawGraph();
 
-    LLScrollListCtrl* mTriggerList{ nullptr };
-    LLScrollListCtrl* mSensorList{ nullptr };
+    LLScrollListCtrl* mCommandList{ nullptr };
+    std::vector<U32> mPowerHistoryA;
+    std::vector<U32> mPowerHistoryB;
 };

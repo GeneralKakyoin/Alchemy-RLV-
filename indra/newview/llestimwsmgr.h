@@ -79,6 +79,11 @@ public:
     F32 getSensorValue(const std::string& sensor, const std::string& axis) const;
     const std::map<std::string, std::map<std::string, F32>>& getSensorValues() const { return mSensorValues; }
 
+    U32 getChannelAIntensity() const { return mChannelAIntensity; }
+    U32 getChannelBIntensity() const { return mChannelBIntensity; }
+    const std::vector<std::string>& getCommandLog() const { return mCommandLog; }
+    void logCommand(const std::string& msg);
+
     void registerNotification(const std::string& sensor, const std::string& axis, S32 channel, const LLUUID& object_id);
     void removeNotification(const std::string& sensor, const std::string& axis, S32 channel, const LLUUID& object_id);
     void clearNotificationsForObject(const LLUUID& object_id);
@@ -134,4 +139,5 @@ private:
     U32 mMaxIntensityB{ 255 };
     U32 mChannelAIntensity{ 0 };
     U32 mChannelBIntensity{ 0 };
+    std::vector<std::string> mCommandLog;
 };

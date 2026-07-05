@@ -241,6 +241,15 @@ LLSD LLEstimWSServer::handleTelemetry(const LLSD& params)
     return response;
 }
 
+void LLEstimWSServer::logCommand(const std::string& msg)
+{
+    mCommandLog.push_back(msg);
+    if (mCommandLog.size() > 30)
+    {
+        mCommandLog.erase(mCommandLog.begin());
+    }
+}
+
 void LLEstimWSServer::sendStimCommand(const std::string& channel, U32 intensity, U32 frequency, U32 pattern)
 {
     U32 max_cap = gSavedSettings.getU32("EstimMaxIntensityCap");
@@ -260,6 +269,8 @@ void LLEstimWSServer::sendStimCommand(const std::string& channel, U32 intensity,
     {
         mChannelBIntensity = capped_intensity;
     }
+
+    logCommand("Stimulate: Ch " + channel + ", Int " + std::to_string(capped_intensity) + (frequency > 0 ? ", Freq " + std::to_string(frequency) : "") + (pattern > 0 ? ", Pat " + std::to_string(pattern) : ""));
 
     if (mActiveConnection && mActiveConnection->isConnected())
     {
@@ -290,6 +301,8 @@ void LLEstimWSServer::sendShockCommand(const std::string& channel, U32 intensity
         capped_intensity = 0;
     }
 
+    logCommand("Shock: Ch " + channel + ", Int " + std::to_string(capped_intensity) + ", Freq " + std::to_string(frequency) + ", Dur " + std::to_string(duration_ms) + "ms");
+
     if (mActiveConnection && mActiveConnection->isConnected())
     {
         LLSD params = LLSD::emptyMap();
@@ -304,6 +317,8 @@ void LLEstimWSServer::sendShockCommand(const std::string& channel, U32 intensity
 
 void LLEstimWSServer::sendPulseConfig(const std::string& channel, U32 pulse_width, const std::string& waveform)
 {
+    logCommand("Pulse Config: Ch " + channel + ", Width " + std::to_string(pulse_width) + (waveform.empty() ? "" : ", Wave " + waveform));
+
     if (mActiveConnection && mActiveConnection->isConnected())
     {
         LLSD params = LLSD::emptyMap();
@@ -317,6 +332,8 @@ void LLEstimWSServer::sendPulseConfig(const std::string& channel, U32 pulse_widt
 
 void LLEstimWSServer::sendSensorMode(const std::string& sensor, const std::string& mode)
 {
+    logCommand("Sensor Mode: " + sensor + " -> " + mode);
+
     if (mActiveConnection && mActiveConnection->isConnected())
     {
         LLSD params = LLSD::emptyMap();
@@ -331,6 +348,8 @@ void LLEstimWSServer::panicStop()
 {
     mChannelAIntensity = 0;
     mChannelBIntensity = 0;
+
+    logCommand("Panic STOP");
 
     if (mActiveConnection && mActiveConnection->isConnected())
     {
