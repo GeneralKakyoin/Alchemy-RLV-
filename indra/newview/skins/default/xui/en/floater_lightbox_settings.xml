@@ -1048,11 +1048,11 @@
 			<slider_bar
 				top_pad="-18"
 				height="20"
-				increment="32"
+				increment="1"
 				follows="left|top|right"
 				layout="topleft"
 				max_val="1024"
-				min_val="32"
+				min_val="1"
 				left="130"
 				right="-55"
 				name="draw_dist_slider_bar"
@@ -1066,9 +1066,9 @@
 				follows="top|right"
 				layout="topleft"
 				max_val="1024"
-				min_val="32"
+				min_val="1"
 				width="55"
-				increment="32"
+				increment="1"
 				name="draw_dist_spinner"
 				control_name="RenderFarClip" />
 			<!--Object LOD-->

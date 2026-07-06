@@ -1,4 +1,4 @@
-﻿# Alchemy Viewer: Custom Features Documentation
+# Alchemy Viewer: Custom Features Documentation
 
 This document describes the design, architecture, and behavior of custom features integrated into this build of the Alchemy Viewer. These features focus on safety-critical enhancements, UI modernization for Restricted Love (RLV), and native haptic telemetry integration.
 
@@ -246,4 +246,30 @@ Provide a way to open all script assets inside an object's task inventory at onc
   3. Minimizes the internal editor floaters immediately (`setMinimized(true)`) to maintain an uncluttered workspace.
   4. Automatically writes the content of each script to a temporary file in the local Temp directory (prefixed with `sl_script_`) and launches the external editor (using `LLExternalEditor`).
   5. The viewer's file watcher continuously monitors each temp file for changes, automatically compiling and uploading the new bytecode to Second Life when any of the files are saved.
+
+---
+
+## 7. Performance & Graphics Balance Controls
+
+### Goal
+Provide significant runtime performance improvements for high-density settings, specifically targeting CPU vectorization bottlenecks, GPU shadow rendering overhead, and scene draw constraints.
+
+### Optimizations & Controls
+
+#### 7.1 LTO & AVX2 Vectorization Defaults
+- **AVX2 & LTO Enabled**: The default compiler configurations (`USE_LTO` and `USE_AVX2`) are set to `ON` in the main `CMakeLists.txt` to enable compiler optimization flags (`/GL` and `/arch:AVX2`) by default, improving memory throughput, floating-point math, and instruction vectorization.
+- **64-bit Compiler Host Integration**: Configured Visual Studio presets (`vs2022-os` and `vs2026-os`) in `CMakePresets.json` to utilize the native 64-bit compiler host toolchain (`host=x64`). This bypasses the 32-bit compiler heap limits and resolves compile-time memory exhaustion errors (`C1060`) during Link-Time Code Generation.
+
+#### 7.2 Balanced Default Avatar Shadows
+- **Shadow Cost Reduction**: Defaulted `RenderAvatarShadowDetail` to `1` (Opaque + Simple alpha masks). This skips the expensive alpha-blended rendering passes inside shadow map cascades for transparent or semi-transparent attachments (e.g. hair-tips, lace, sheer fabrics) on avatars, yielding massive GPU performance recoveries in crowded regions.
+
+#### 7.3 Advanced Shadow Preferences UI
+- **Avatar Shadows Dropdown**: Added an "Avatar Shadows" dropdown selection in the advanced graphics preference panel (`floater_preferences_graphics_advanced.xml`) bound to `RenderAvatarShadowDetail`, exposing simple selection controls for:
+  - *Disabled* (0)
+  - *Opaque + Mask* (1) - Default
+  - *Full* (2)
+
+#### 7.4 Precision Ultra-Low Draw Distance
+- **Granular Draw Slider**: Adjusted draw distance controls (`RenderFarClip`) across all graphic menus (advanced graphics floater, quick settings, preset pulldowns, and lightbox settings) to support a minimum rendering distance of `1` meter, with a step-by-step increment value of `1` meter. This allows users to throttle the frustum draw bounds to absolute minimums to reclaim frames in extremely GPU-bound environments.
+
 

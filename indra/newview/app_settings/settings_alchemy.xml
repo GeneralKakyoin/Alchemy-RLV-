@@ -1453,7 +1453,7 @@
             <key>Type</key>
             <string>S32</string>
             <key>Value</key>
-            <integer>2</integer>
+            <integer>1</integer>
         </map>
         <key>RenderShadowCullMode</key>
         <map>

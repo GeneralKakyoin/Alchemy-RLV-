@@ -78,7 +78,12 @@
         "common",
         "windows"
       ],
-      "generator": "Visual Studio 17 2022"
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "VS_DISABLE_FATAL_WARNINGS": true
+      }
     },
     {
       "name": "vs2022",
@@ -95,7 +100,12 @@
         "common",
         "windows"
       ],
-      "generator": "Visual Studio 18 2026"
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "VS_DISABLE_FATAL_WARNINGS": true
+      }
     },
     {
       "name": "vs2026",

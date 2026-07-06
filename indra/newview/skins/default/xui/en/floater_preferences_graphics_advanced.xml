@@ -29,13 +29,13 @@
     decimal_digits="0"
     follows="left|top"
     height="16"
-    increment="8"
+    increment="1"
     initial_value="160"
     label="Draw distance:"
     label_width="185"
     layout="topleft"
     left="30"
-    min_val="64"
+    min_val="1"
     max_val="512"
     name="DrawDistance"
     top_delta="16"
@@ -799,6 +799,40 @@
        value="1"/>
      <combo_box.item
        label="Sun/Moon + Projectors"
+       name="2"
+       value="2"/>
+  </combo_box>
+
+  <text
+    type="string"
+    length="1"
+    follows="left|top"
+    height="16"
+    layout="topleft"
+    left="420"
+    name="RenderAvatarShadowDetailText"
+    top_delta="22"
+    width="128">
+      Avatar Shadows:
+  </text>
+  <combo_box
+   control_name="RenderAvatarShadowDetail"
+   height="18"
+   layout="topleft"
+   left_delta="175"
+   top_delta="0" 
+   name="AvatarShadowDetail"
+   width="150">
+     <combo_box.item
+       label="Opaque Only"
+       name="0"
+       value="0"/>
+     <combo_box.item
+       label="Opaque + Mask"
+       name="1"
+       value="1"/>
+     <combo_box.item
+       label="Full (Alpha Blend)"
        name="2"
        value="2"/>
   </combo_box>

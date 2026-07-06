@@ -210,12 +210,12 @@
   <slider_bar
    top_pad="-16"
    height="20"
-   increment="32"
+   increment="1"
    initial_value="96"
    follows="left|top|right"
    layout="topleft"
    max_val="512"
-   min_val="64"
+   min_val="1"
    left="113"
    right="-68"
    name="draw_dist_slider_bar"
@@ -230,9 +230,9 @@
    follows="top|right"
    layout="topleft"
    max_val="512"
-   min_val="64"
+   min_val="1"
    width="60"
-   increment="32"
+   increment="1"
    name="draw_dist_spinner"
    control_name="RenderFarClip"/>
   <text
