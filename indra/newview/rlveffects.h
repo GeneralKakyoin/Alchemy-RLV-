@@ -73,6 +73,7 @@ public:
     ~RlvSphereEffect();
 
     static const EVisualEffect EffectCode = EVisualEffect::RlvSphere;
+    float getDistMax() { return m_nDistanceMax.get(); }
 public:
     void run(const LLVisualEffectParams* pParams) override;
     static ERlvCmdRet onModeChanged(const LLUUID& idRlvObj, const boost::optional<RlvBehaviourModifierValue> newValue);

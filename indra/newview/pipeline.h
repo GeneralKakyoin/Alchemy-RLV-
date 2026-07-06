@@ -1066,6 +1066,7 @@ public:
     static bool RenderDeferredAtmospheric;
     static F32 RenderHighlightFadeTime;
     static F32 RenderFarClip;
+    F32        mCurrentRLVFarClip = -1.f; // Interpolated RLV far clip override; -1 = inactive
     static LLVector3 RenderShadowSplitExponent;
     static F32 RenderShadowErrorCutoff;
     static F32 RenderShadowFOVCutoff;

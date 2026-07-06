@@ -820,6 +820,27 @@ void RlvHandler::onActiveGroupChanged()
     }
 }
 
+// Returns the smallest active @setsphere distmax across all active sphere effects, or -1.0f if none.
+F32 RlvHandler::getEffectiveSetsphereMax() const
+{
+    if (!hasBehaviour(RLV_BHVR_SETSPHERE))
+        return -1.0f;
+
+    std::list<RlvSphereEffect*> effects;
+    if (!LLVfxManager::instance().getEffects<RlvSphereEffect>(effects))
+        return -1.0f;
+
+    F32 min_dist = -1.0f;
+    for (RlvSphereEffect* pEffect : effects)
+    {
+        if (!pEffect) continue;
+        F32 val = pEffect->getDistMax();
+        if (min_dist < 0.0f || val < min_dist)
+            min_dist = val;
+    }
+    return min_dist;
+}
+
 void RlvHandler::setActiveGroup(const LLUUID& idGroup)
 {
     // If we have an existing observer fpr a different group, remove it

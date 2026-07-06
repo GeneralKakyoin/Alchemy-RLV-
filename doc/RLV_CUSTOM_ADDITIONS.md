@@ -282,3 +282,40 @@ The Settings menu includes an **Alert Settings** submenu which allows setting:
 - **Verbose / Silent Mode**: Toggles whether acknowledgment messages describing configuration and state changes (restrictions, settings, triggers, spanks) are sent. Toggled via the `"Verbose"` button.
 - **Wearer Messages**: Toggles whether the wearer receives these change acknowledgment alerts (while owners/operators always do). Toggled via the `"Wearer Msg"` button.
 - **Hardcore Wearer Workaround**: The Wearer can always access the Settings menu to toggle Hardcore mode ON (even when locked or set as a non-owner/wearer), ensuring they can increase restriction level, while preventing modifications to Safewords or unlocking when locked.
+
+---
+
+## 9. @setsphere Render Distance Optimization (`RenderClumpToRLVSpheres`)
+
+### Overview
+When a `@setsphere_distmax:R` restriction is active, everything beyond radius R is completely obscured. The **"Clamp render distance to RLV vision spheres"** setting exploits this by dynamically clamping the local OpenGL far clip plane to the sphere boundary, preventing the GPU from processing occluded geometry.
+
+> **Note:** This is a *local* GPU optimization only. The viewer continues to send the user's real draw distance to the simulator, so object data and textures keep streaming in the background. This ensures instant scene restoration when the restriction is lifted, with no loading freeze.
+
+### Setting
+- **Name:** `RenderClumpToRLVSpheres` (Boolean, default OFF)
+- **Location:** Graphics Preferences → Draw Distance section (both the Performance tab and the classic Graphics tab)
+- **Label:** "Clamp render distance to RLV vision spheres"
+
+### Behavior When Active
+- **Far clip clamping:** `FarClip = min(NormalDrawDistance, CameraToAvatarDist + SphereRadius + Buffer)`
+  - The `CameraToAvatarDist` term ensures your avatar stays visible when camming out.
+  - `Buffer = (SphereRadius × 10%) + 2m` prevents hard geometry clipping at the sphere edge.
+  - Minimum enforced far clip: **3 meters** (prevents GPU math instability at distmax=0).
+- **Asymmetric lerp:**
+  - Restricting (e.g. 64m → 5m): lerp factor 0.30 — snaps down fast since the view is blacking out.
+  - Restoring (e.g. 5m → 64m): lerp factor 0.05 — slides outward over ~1–2 seconds to amortize geometry load.
+- **Draw distance slider:** Grayed out with tooltip "Draw distance controlled by RLV" while active.
+- **Minimap:** Avatar display range clamped to the sphere radius.
+- **Nearby People panel:** Query range clamped to `min(NearMeRange, SphereRadius)`.
+
+### Edge Cases
+| Scenario | Behavior |
+|---|---|
+| `@setsphere_distmax:0` (absolute blindness) | Hard minimum of 3m enforced; no GPU crash |
+| Multiple overlapping sphere effects | Smallest distmax wins |
+| Camming out beyond sphere radius | Far clip expands to include cam position + sphere bubble |
+| Restriction lifted | Far clip slides back over ~1–2 seconds |
+| Toggle disabled mid-session | Interpolation state reset immediately; normal draw distance resumes |
+| Teleport / region crossing | RLV state clears naturally; slider unlocks until restrictions re-apply |
+| Viewer crash | Override is in-memory only; normal draw distance resumes on restart |

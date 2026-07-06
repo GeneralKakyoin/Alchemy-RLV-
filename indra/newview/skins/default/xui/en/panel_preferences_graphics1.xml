@@ -232,6 +232,18 @@
      m
   </text>
 
+  <check_box
+    control_name="RenderClumpToRLVSpheres"
+    follows="left|top"
+    height="16"
+    label="Clamp render distance to RLV vision spheres"
+    layout="topleft"
+    left="30"
+    name="render_clump_to_rlv_gfx"
+    top_pad="6"
+    tool_tip="When an RLV @setsphere restriction is active, clamps the local render distance to the sphere boundary for better performance. The server still receives your full draw distance."
+    width="420" />
+
   <button
   height="23"
   label="Automatic adjustments settings"

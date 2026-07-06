@@ -117,6 +117,7 @@
 #include "llweb.h"
 // [RLVa:KB] - Checked: 2010-03-18 (RLVa-1.2.0a)
 #include "rlvactions.h"
+#include "rlvhandler.h"
 // [/RLVa:KB]
 
 #include "lllogininstance.h"        // to check if logged in yet
@@ -3300,6 +3301,24 @@ bool LLPanelPreferenceGraphics::postBuild()
 void LLPanelPreferenceGraphics::draw()
 {
     LLPanelPreference::draw();
+
+    // [RLVa:KB] - Lock the draw distance sliders when RLV sphere clamping is active
+    static LLCachedControl<bool> sClampToRLVSpheres(gSavedSettings, "RenderClumpToRLVSpheres", false);
+    bool rlv_controlling = sClampToRLVSpheres && RlvHandler::isEnabled()
+                           && (gRlvHandler.getEffectiveSetsphereMax() >= 0.f);
+
+    // Slider names differ between the two prefs panels — try both
+    static const char* k_slider_names[] = { "draw_distance", "DrawDistance", nullptr };
+    for (int i = 0; k_slider_names[i]; ++i)
+    {
+        LLSliderCtrl* slider = findChild<LLSliderCtrl>(k_slider_names[i]);
+        if (slider)
+        {
+            slider->setEnabled(!rlv_controlling);
+            slider->setToolTip(rlv_controlling ? std::string("Draw distance controlled by RLV") : std::string());
+        }
+    }
+    // [/RLVa:KB]
 }
 
 void LLPanelPreferenceGraphics::onPresetsListChange()

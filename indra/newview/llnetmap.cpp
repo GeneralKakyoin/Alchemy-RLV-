@@ -47,6 +47,7 @@
 #include "alavatargroups.h"
 #include "llagent.h"
 #include "llagentcamera.h"
+#include "rlvhandler.h"
 #include "llappviewer.h" // for gDisconnected
 #include "llavataractions.h"
 #include "llcallingcard.h" // LLAvatarTracker
@@ -490,7 +491,17 @@ void LLNetMap::draw()
         std::vector<LLVector3d> positions;
         bool unknown_relative_z;
 
-        LLWorld::getInstance()->getAvatars(&avatar_ids, &positions, gAgentCamera.getCameraPositionGlobal());
+        // [RLVa:KB] - Clamp minimap avatar query range to active @setsphere boundary
+        F32 query_range = FLT_MAX;
+        static LLCachedControl<bool> sClampToRLVSpheres(gSavedSettings, "RenderClumpToRLVSpheres", false);
+        if (sClampToRLVSpheres && RlvHandler::isEnabled())
+        {
+            F32 rlv_max = gRlvHandler.getEffectiveSetsphereMax();
+            if (rlv_max >= 0.f)
+                query_range = rlv_max;
+        }
+        LLWorld::getInstance()->getAvatars(&avatar_ids, &positions, gAgentCamera.getCameraPositionGlobal(), query_range);
+        // [/RLVa:KB]
 
         std::vector<std::pair<U32, bool>> indexed_avatars;
         indexed_avatars.reserve(avatar_ids.size());

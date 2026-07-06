@@ -905,7 +905,17 @@ void LLPanelPeople::updateNearbyList()
 
     std::vector<LLVector3d> positions;
 
-    LLWorld::getInstance()->getAvatars(&mNearbyList->getIDs(), &positions, gAgent.getPositionGlobal(), gSavedSettings.getF32("NearMeRange"));
+    // [RLVa:KB] - Clamp nearby list range to active @setsphere boundary
+    F32 query_range = gSavedSettings.getF32("NearMeRange");
+    static LLCachedControl<bool> sClampToRLVSpheres(gSavedSettings, "RenderClumpToRLVSpheres", false);
+    if (sClampToRLVSpheres && RlvHandler::isEnabled())
+    {
+        F32 rlv_max = gRlvHandler.getEffectiveSetsphereMax();
+        if (rlv_max >= 0.f)
+            query_range = llmin(query_range, rlv_max);
+    }
+    LLWorld::getInstance()->getAvatars(&mNearbyList->getIDs(), &positions, gAgent.getPositionGlobal(), query_range);
+    // [/RLVa:KB]
     mNearbyList->setDirty();
 #ifdef LL_DISCORD
     if (gSavedSettings.getBOOL("EnableDiscord"))

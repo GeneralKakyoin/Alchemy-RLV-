@@ -117,6 +117,7 @@ public:
 public:
     // Accessors/Mutators
     const LLUUID&     getAgentGroup() const         { return m_idAgentGroup; }                  // @setgroup
+    F32               getEffectiveSetsphereMax() const;                                          // @setsphere
     bool              getCanCancelTp() const        { return m_fCanCancelTp; }                  // @accepttp and @tpto
     void              setCanCancelTp(bool fAllow)   { m_fCanCancelTp = fAllow; }                // @accepttp and @tpto
     F64               getLastCommandTime() const    { return m_LastCommandTime; }

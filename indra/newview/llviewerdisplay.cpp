@@ -226,6 +226,50 @@ void display_update_camera()
     {
         final_far = llmax(32.f, final_far / (LLViewerTexture::sDesiredDiscardBias - 1.f));
     }
+
+    // RLV @setsphere render distance clamping
+    // When a vision-restricting sphere is active and the optimization toggle is on,
+    // clamp the local far clip to the sphere boundary + a small buffer.
+    // The server still receives the full draw distance so object data keeps streaming.
+    static LLCachedControl<bool> sClampToRLVSpheres(gSavedSettings, "RenderClumpToRLVSpheres", false);
+    if (!gCubeSnapshot && sClampToRLVSpheres && RlvHandler::isEnabled())
+    {
+        F32 rlv_max = gRlvHandler.getEffectiveSetsphereMax();
+        if (rlv_max >= 0.f)
+        {
+            // Hard minimum to prevent projection matrix math instability at zero
+            rlv_max = llmax(rlv_max, 3.f);
+
+            // Account for camera distance from avatar so avatar stays visible when camming out
+            F32 cam_av_dist = (F32)(gAgent.getPositionGlobal() - gAgentCamera.getCameraPositionGlobal()).magVec();
+
+            // Dynamic buffer: 10% of sphere radius + 2m prevents hard edge clipping
+            F32 buffer     = (rlv_max * 0.1f) + 2.f;
+            F32 target_far = llmin(final_far, cam_av_dist + rlv_max + buffer);
+
+            // Asymmetric lerp: snap down fast (blindfold applies), slide out slowly (objects load gradually)
+            if (gPipeline.mCurrentRLVFarClip < 0.f)
+                gPipeline.mCurrentRLVFarClip = final_far; // first frame: initialize to current value
+            F32 lerp_factor = (target_far < gPipeline.mCurrentRLVFarClip) ? 0.30f : 0.05f;
+            gPipeline.mCurrentRLVFarClip += (target_far - gPipeline.mCurrentRLVFarClip) * lerp_factor;
+            final_far = gPipeline.mCurrentRLVFarClip;
+        }
+        else if (gPipeline.mCurrentRLVFarClip >= 0.f)
+        {
+            // Restriction lifted — slide back out to normal draw distance
+            gPipeline.mCurrentRLVFarClip += (final_far - gPipeline.mCurrentRLVFarClip) * 0.05f;
+            if (fabsf(gPipeline.mCurrentRLVFarClip - final_far) < 0.5f)
+                gPipeline.mCurrentRLVFarClip = -1.f; // snap to done
+            else
+                final_far = gPipeline.mCurrentRLVFarClip;
+        }
+    }
+    else
+    {
+        // Toggle was disabled mid-session — reset the interpolation state
+        gPipeline.mCurrentRLVFarClip = -1.f;
+    }
+
     LLViewerCamera::getInstance()->setFar(final_far);
     LLVOAvatar::sRenderDistance = llclamp(final_far, 16.f, 256.f);
     gViewerWindow->setup3DRender();
