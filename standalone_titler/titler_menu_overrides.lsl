@@ -13,12 +13,34 @@ integer gMenuListen = 0;
 
 string  gMenuContext = "main";
 integer gPageOffset = 0;
+integer gParentPageOffset = 0;
 integer gActiveMsgIdx = -1;
 
-// Check if context belongs to the main menu script
-integer is_main_context(string context)
+string BTN_FILLER = " ";
+
+/// Check if context belongs to this overrides script (not the main menu script)
+string get_msg_prefix(integer idx)
 {
-    if (context == "main" || context == "messages" || context == "msg_edit" || context == "presets")
+    return "lsd:titler:msg:" + (string)idx + ":";
+}
+
+string get_btn(list btns, integer idx)
+{
+    if (idx < llGetListLength(btns))
+    {
+        string v = llList2String(btns, idx);
+        if (v != "" && v != " ") return v;
+    }
+    return BTN_FILLER;
+}
+
+integer is_override_context(string context)
+{
+    if (context == "before_fx" || context == "during_fx" || context == "after_fx" ||
+        context == "appearance" || context == "msg_edit" || context == "msg_move" || context == "presets" ||
+        (context == "fonts" && gActiveMsgIdx >= 0) ||
+        (llSubStringIndex(context, "select_style:") == 0) ||
+        (context == "select_trink_style"))
     {
         return TRUE;
     }
@@ -35,7 +57,17 @@ open_dialog(string text, list buttons)
     
     gMenuChannel = -1000000000 - (integer)llFrand(1000000000);
     gMenuListen = llListen(gMenuChannel, "", llGetOwner(), "");
-    llDialog(llGetOwner(), text, buttons, gMenuChannel);
+    
+    // Flat layout — llDialog displays index 0 at bottom, index 9-11 at top.
+    // Buttons are passed in visual bottom-to-top order: row0, row1, row2, row3.
+    list final_btns = [
+        get_btn(buttons,  0), get_btn(buttons,  1), get_btn(buttons,  2),
+        get_btn(buttons,  3), get_btn(buttons,  4), get_btn(buttons,  5),
+        get_btn(buttons,  6), get_btn(buttons,  7), get_btn(buttons,  8),
+        get_btn(buttons,  9), get_btn(buttons, 10), get_btn(buttons, 11)
+    ];
+    
+    llDialog(llGetOwner(), text, final_btns, gMenuChannel);
     llSetTimerEvent(60.0);
 }
 
@@ -55,7 +87,7 @@ open_textbox(string text)
 
 render_before_fx()
 {
-    string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+    string prefix = get_msg_prefix(gActiveMsgIdx);
     string t_style = llLinksetDataRead(prefix + "trans_in"); if (t_style == "") t_style = "Inherited";
     string t_speed = llLinksetDataRead(prefix + "trans_speed"); if (t_speed == "") t_speed = "Inherited";
     string t_color = llLinksetDataRead(prefix + "color_trans"); if (t_color == "") t_color = "Inherited";
@@ -78,7 +110,7 @@ render_before_fx()
 
 render_during_fx()
 {
-    string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+    string prefix = get_msg_prefix(gActiveMsgIdx);
     string trink = llLinksetDataRead(prefix + "trinket_style"); if (trink == "") trink = "Inherited";
     string tpos  = llLinksetDataRead(prefix + "trinket_pos"); if (tpos == "") tpos = "Inherited";
     string swid  = llLinksetDataRead(prefix + "scroll_width"); if (swid == "") swid = "Inherited";
@@ -115,7 +147,7 @@ render_during_fx()
 
 render_after_fx()
 {
-    string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+    string prefix = get_msg_prefix(gActiveMsgIdx);
     string t_style = llLinksetDataRead(prefix + "trans_out"); if (t_style == "") t_style = "Inherited";
     string t_speed = llLinksetDataRead(prefix + "trans_speed"); if (t_speed == "") t_speed = "Inherited";
     string t_color = llLinksetDataRead(prefix + "color_trans"); if (t_color == "") t_color = "Inherited";
@@ -138,7 +170,7 @@ render_after_fx()
 
 render_appearance_overrides()
 {
-    string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+    string prefix = get_msg_prefix(gActiveMsgIdx);
     string col = llLinksetDataRead(prefix + "color"); if (col == "") col = "Inherited";
     string alp = llLinksetDataRead(prefix + "alpha"); if (alp == "") alp = "Inherited";
     string hgt = llLinksetDataRead(prefix + "height"); if (hgt == "") hgt = "Inherited";
@@ -171,7 +203,7 @@ render_fonts_menu()
     }
     else
     {
-        string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+        string prefix = get_msg_prefix(gActiveMsgIdx);
         active_font = llLinksetDataRead(prefix + "font");
         if (active_font == "") active_font = "Inherited";
     }
@@ -407,13 +439,185 @@ render_trinket_style_select()
 
 render_cursor_selection()
 {
-    list cursor_btns = ["_", "|", "█", "▊", "None", "Back"];
-    open_dialog("Select typing / blinking cursor format:", cursor_btns);
+    list cursor_btns = [
+        "Bᴀᴄᴋ", " ", " ",
+        "▊", "Nᴏɴᴇ", " ",
+        "_", "|", "█"
+    ];
+    open_dialog("⬡ Cᴜʀsᴏʀ Sᴇʟᴇᴄᴛɪᴏɴ ⬡\nSᴇʟᴇᴄᴛ ᴛʏᴘɪɴɢ / ʙʟɪɴᴋɪɴɢ ᴄᴜʀsᴏʀ ꜰᴏʀᴍᴀᴛ:\n", cursor_btns);
+}
+
+clear_message_overrides(integer idx)
+{
+    string prefix = "lsd:titler:msg:" + (string)idx + ":";
+    llLinksetDataDelete(prefix + "color");
+    llLinksetDataDelete(prefix + "color_end");
+    llLinksetDataDelete(prefix + "color_trans");
+    llLinksetDataDelete(prefix + "alpha");
+    llLinksetDataDelete(prefix + "height");
+    llLinksetDataDelete(prefix + "align");
+    llLinksetDataDelete(prefix + "trans_in");
+    llLinksetDataDelete(prefix + "trans_out");
+    llLinksetDataDelete(prefix + "trans_speed");
+    llLinksetDataDelete(prefix + "trinket_style");
+    llLinksetDataDelete(prefix + "trinket_pos");
+    llLinksetDataDelete(prefix + "scroll_width");
+    llLinksetDataDelete(prefix + "scroll_enabled");
+    llLinksetDataDelete(prefix + "font");
+    llLinksetDataDelete(prefix + "flicker_glitch");
+    llLinksetDataDelete(prefix + "blink_cursor");
+}
+
+copy_msg(string from_pref, string to_pref)
+{
+    llLinksetDataWrite(to_pref + "text",           llLinksetDataRead(from_pref + "text"));
+    llLinksetDataWrite(to_pref + "dur",            llLinksetDataRead(from_pref + "dur"));
+    llLinksetDataWrite(to_pref + "color",          llLinksetDataRead(from_pref + "color"));
+    llLinksetDataWrite(to_pref + "color_end",      llLinksetDataRead(from_pref + "color_end"));
+    llLinksetDataWrite(to_pref + "color_trans",    llLinksetDataRead(from_pref + "color_trans"));
+    llLinksetDataWrite(to_pref + "alpha",          llLinksetDataRead(from_pref + "alpha"));
+    llLinksetDataWrite(to_pref + "height",         llLinksetDataRead(from_pref + "height"));
+    llLinksetDataWrite(to_pref + "align",          llLinksetDataRead(from_pref + "align"));
+    llLinksetDataWrite(to_pref + "trans_in",       llLinksetDataRead(from_pref + "trans_in"));
+    llLinksetDataWrite(to_pref + "trans_out",      llLinksetDataRead(from_pref + "trans_out"));
+    llLinksetDataWrite(to_pref + "trans_speed",    llLinksetDataRead(from_pref + "trans_speed"));
+    llLinksetDataWrite(to_pref + "trinket_style",  llLinksetDataRead(from_pref + "trinket_style"));
+    llLinksetDataWrite(to_pref + "trinket_pos",    llLinksetDataRead(from_pref + "trinket_pos"));
+    llLinksetDataWrite(to_pref + "scroll_width",   llLinksetDataRead(from_pref + "scroll_width"));
+    llLinksetDataWrite(to_pref + "scroll_enabled", llLinksetDataRead(from_pref + "scroll_enabled"));
+    llLinksetDataWrite(to_pref + "font",           llLinksetDataRead(from_pref + "font"));
+    llLinksetDataWrite(to_pref + "flicker_glitch", llLinksetDataRead(from_pref + "flicker_glitch"));
+    llLinksetDataWrite(to_pref + "blink_cursor",   llLinksetDataRead(from_pref + "blink_cursor"));
+}
+
+clear_temp_msg()
+{
+    string prefix = "lsd:titler:temp_msg:";
+    llLinksetDataDelete(prefix + "text"); llLinksetDataDelete(prefix + "dur");
+    llLinksetDataDelete(prefix + "color"); llLinksetDataDelete(prefix + "color_end");
+    llLinksetDataDelete(prefix + "color_trans"); llLinksetDataDelete(prefix + "alpha");
+    llLinksetDataDelete(prefix + "height"); llLinksetDataDelete(prefix + "align");
+    llLinksetDataDelete(prefix + "trans_in"); llLinksetDataDelete(prefix + "trans_out");
+    llLinksetDataDelete(prefix + "trans_speed"); llLinksetDataDelete(prefix + "trinket_style");
+    llLinksetDataDelete(prefix + "trinket_pos"); llLinksetDataDelete(prefix + "scroll_width");
+    llLinksetDataDelete(prefix + "scroll_enabled"); llLinksetDataDelete(prefix + "font");
+    llLinksetDataDelete(prefix + "flicker_glitch"); llLinksetDataDelete(prefix + "blink_cursor");
+}
+
+move_message(integer from_idx, integer to_idx)
+{
+    if (from_idx == to_idx) return;
+    integer count = (integer)llLinksetDataRead("lsd:titler:msg_count");
+    if (to_idx < 0 || to_idx >= count) return;
+    
+    string from_pref = "lsd:titler:msg:" + (string)from_idx + ":";
+    string temp_pref = "lsd:titler:temp_msg:";
+    copy_msg(from_pref, temp_pref);
+    
+    if (from_idx < to_idx)
+    {
+        integer i;
+        for (i = from_idx; i < to_idx; ++i)
+            copy_msg("lsd:titler:msg:" + (string)(i + 1) + ":", "lsd:titler:msg:" + (string)i + ":");
+    }
+    else
+    {
+        integer i;
+        for (i = from_idx; i > to_idx; --i)
+            copy_msg("lsd:titler:msg:" + (string)(i - 1) + ":", "lsd:titler:msg:" + (string)i + ":");
+    }
+    copy_msg(temp_pref, "lsd:titler:msg:" + (string)to_idx + ":");
+    clear_temp_msg();
+    
+    integer active_play_idx = (integer)llLinksetDataRead("lsd:titler:active_msg_idx");
+    if (active_play_idx == from_idx)
+        llLinksetDataWrite("lsd:titler:active_msg_idx", (string)to_idx);
+    else if (from_idx < to_idx)
+    {
+        if (active_play_idx > from_idx && active_play_idx <= to_idx)
+            llLinksetDataWrite("lsd:titler:active_msg_idx", (string)(active_play_idx - 1));
+    }
+    else
+    {
+        if (active_play_idx >= to_idx && active_play_idx < from_idx)
+            llLinksetDataWrite("lsd:titler:active_msg_idx", (string)(active_play_idx + 1));
+    }
+}
+
+render_msg_editor()
+{
+    string prefix = get_msg_prefix(gActiveMsgIdx);
+    string m_text = llLinksetDataRead(prefix + "text");
+    if (llStringLength(m_text) > 30) m_text = llGetSubString(m_text, 0, 29) + "...";
+    string m_dur  = llLinksetDataRead(prefix + "dur"); if (m_dur == "") m_dur = "4.0";
+    integer dur_val = (integer)((float)m_dur);
+    if (dur_val <= 0) dur_val = 4;
+    string m_font = llLinksetDataRead(prefix + "font"); if (m_font == "") m_font = "Inherited";
+    
+    string text = "⬡ Mᴇssᴀɢᴇ Eᴅɪᴛᴏʀ: Msɢ " + (string)(gActiveMsgIdx + 1) + " ⬡\n" + gMenuDivider;
+    
+    string prev_text = llLinksetDataRead(prefix + "text");
+    if (llStringLength(prev_text) > 80) prev_text = llGetSubString(prev_text, 0, 79) + "...";
+    text += "« " + prev_text + " »\n" + gMenuDivider;
+    
+    text += "▸ Rᴀᴡ Tᴇxᴛ: \"" + m_text + "\"\n";
+    text += "▸ Dᴜʀᴀᴛɪᴏɴ: " + (string)dur_val + "s\n";
+    text += "▸ Fᴏɴᴛ: " + m_font + "\n" + gMenuDivider;
+    text += "Eᴅɪᴛ ᴘᴀʀᴀᴍᴇᴛᴇʀs ᴏʀ sᴇʟᴇᴄᴛ sᴛʏʟᴇ:";
+    
+    list buttons = [
+        "Bᴀᴄᴋ", "Sᴇᴛ Fᴏɴᴛ", "Mᴏᴠᴇ...",
+        "Pʀᴇsᴇᴛs...", "Pʀᴇᴠɪᴇᴡ", "Dᴇʟᴇᴛᴇ",
+        "Tʀᴀɴs Iɴ...", "Iᴅʟᴇ FX...", "Tʀᴀɴs Oᴜᴛ...",
+        "Cʜᴀɴɢᴇ Tᴇxᴛ", "Dᴜʀᴀᴛɪᴏɴ", "Aᴘᴘᴇᴀʀ..."
+    ];
+    open_dialog(text, buttons);
+}
+
+render_presets_menu()
+{
+    string text = "⬡ Sᴛʏʟᴇ Pʀᴇsᴇᴛs ⬡\n" + gMenuDivider;
+    text += "Apply quick style overrides to Msg " + (string)(gActiveMsgIdx + 1) + ":\n";
+    text += "- Cyber: Neon green, matrix, hex trinkets\n";
+    text += "- Princess: Pink, fade, heart trinkets\n";
+    text += "- Terminal: White, typing, no trinkets\n";
+    text += "- Glitch: Random color, glitch, flicker\n";
+    text += "- Reset: Clear all local overrides";
+    
+    list buttons = [
+        "Bᴀᴄᴋ", " ", " ",
+        "Gʟɪᴛᴄʜ", "Rᴇsᴇᴛ", " ",
+        "Cʏʙᴇʀ", "Pʀɪɴᴄᴇss", "Tᴇʀᴍɪɴᴀʟ"
+    ];
+    open_dialog(text, buttons);
+}
+
+render_msg_move_menu()
+{
+    integer count = (integer)llLinksetDataRead("lsd:titler:msg_count");
+    string m_text = llLinksetDataRead(get_msg_prefix(gActiveMsgIdx) + "text");
+    if (llStringLength(m_text) > 30) m_text = llGetSubString(m_text, 0, 29) + "...";
+    
+    string text = "⬡ Mᴏᴠᴇ Mᴇssᴀɢᴇ ⬡\n" + gMenuDivider;
+    text += "▸ Cᴜʀʀᴇɴᴛ Pᴏsɪᴛɪᴏɴ: Msg " + (string)(gActiveMsgIdx + 1) + " ᴏꜰ " + (string)count + "\n";
+    text += "▸ Rᴀᴡ Tᴇxᴛ: \"" + m_text + "\"\n" + gMenuDivider;
+    text += "Sᴇʟᴇᴄᴛ ᴅɪʀᴇᴄᴛɪᴏɴ ᴏʀ ᴇɴᴛᴇʀ ᴛᴀʀɢᴇᴛ ɪɴᴅᴇx:";
+    
+    list buttons = [
+        "Bᴀᴄᴋ", "▲ Mᴏᴠᴇ Uᴘ", "Mᴏᴠᴇ Dᴏᴡɴ ▼",
+        "Mᴏᴠᴇ Tᴏ...", " ", " ",
+        " ", " ", " ",
+        " ", " ", " "
+    ];
+    open_dialog(text, buttons);
 }
 
 refresh_menu()
 {
-    if (gMenuContext == "before_fx") render_before_fx();
+    if (gMenuContext == "msg_edit") render_msg_editor();
+    else if (gMenuContext == "presets") render_presets_menu();
+    else if (gMenuContext == "msg_move") render_msg_move_menu();
+    else if (gMenuContext == "before_fx") render_before_fx();
     else if (gMenuContext == "during_fx") render_during_fx();
     else if (gMenuContext == "after_fx") render_after_fx();
     else if (gMenuContext == "appearance") render_appearance_overrides();
@@ -432,7 +636,7 @@ default
 {
     state_entry()
     {
-        // Standalone overrides utility
+        llSetMemoryLimit(65536);
     }
 
     link_message(integer sender_num, integer code, string str, key id)
@@ -447,12 +651,12 @@ default
             {
                 string target_context = llList2String(parts, 1);
                 
-                // Only process if it is in our context domain
-                if (is_main_context(target_context) == FALSE)
+                if (is_override_context(target_context))
                 {
                     gMenuContext = target_context;
                     gActiveMsgIdx = (integer)llList2String(parts, 2);
-                    gPageOffset = (integer)llList2String(parts, 3);
+                    gParentPageOffset = (integer)llList2String(parts, 3);
+                    gPageOffset = gParentPageOffset;
                     
                     refresh_menu();
                 }
@@ -473,8 +677,41 @@ default
             if (llSubStringIndex(gMenuContext, "textbox:") == 0)
             {
                 string action = llGetSubString(gMenuContext, 8, -1);
-                string prefix = "lsd:titler:msg:" + (string)gActiveMsgIdx + ":";
+                string prefix = get_msg_prefix(gActiveMsgIdx);
                 
+                if (action == "msg_text")
+                {
+                    llLinksetDataWrite(prefix + "text", cmd);
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit";
+                    refresh_menu();
+                    return;
+                }
+                if (action == "msg_dur")
+                {
+                    llLinksetDataWrite(prefix + "dur", cmd);
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit";
+                    refresh_menu();
+                    return;
+                }
+                if (action == "msg_move_to")
+                {
+                    integer target_pos = (integer)cmd;
+                    integer m_count = (integer)llLinksetDataRead("lsd:titler:msg_count");
+                    if (target_pos < 1 || target_pos > m_count)
+                        llOwnerSay("Invalid position. Must be between 1 and " + (string)m_count + ".");
+                    else
+                    {
+                        integer target_idx = target_pos - 1;
+                        move_message(gActiveMsgIdx, target_idx);
+                        gActiveMsgIdx = target_idx;
+                        llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    }
+                    gMenuContext = "msg_move";
+                    refresh_menu();
+                    return;
+                }
                 if (action == "msg_in_speed")
                 {
                     llLinksetDataWrite(prefix + "trans_speed", cmd);
@@ -652,7 +889,9 @@ default
             }
 
             // --- Dialog Processing ---
-            if (cmd == "Back")
+            if (cmd == BTN_FILLER) return;
+            
+            if (cmd == "Back" || cmd == "Bᴀᴄᴋ")
             {
                 string handin_context = "main";
                 
@@ -660,8 +899,14 @@ default
                 else if (gMenuContext == "during_fx") handin_context = "msg_edit";
                 else if (gMenuContext == "after_fx") handin_context = "msg_edit";
                 else if (gMenuContext == "appearance") handin_context = "msg_edit";
-                else if (gMenuContext == "fonts" && gActiveMsgIdx != -1) handin_context = "msg_edit";
-                
+                else if (gMenuContext == "fonts" && gActiveMsgIdx >= 0) handin_context = "msg_edit";
+                else if (gMenuContext == "msg_edit") handin_context = "messages";
+                else if (gMenuContext == "presets" || gMenuContext == "msg_move")
+                {
+                    gMenuContext = "msg_edit";
+                    refresh_menu();
+                    return;
+                }
                 else if (llSubStringIndex(gMenuContext, "select_style:") == 0)
                 {
                     list parts = llParseString2List(gMenuContext, [":"], []);
@@ -683,8 +928,9 @@ default
                     return;
                 }
                 
-                // Hand back to main menu script
-                llMessageLinked(LINK_SET, 189, "HANDOFF|" + handin_context + "|" + (string)gActiveMsgIdx + "|" + (string)gPageOffset, id);
+                gMenuContext = "";
+                if (gMenuListen != 0) { llListenRemove(gMenuListen); gMenuListen = 0; }
+                llMessageLinked(LINK_SET, 189, "HANDOFF|" + handin_context + "|" + (string)gActiveMsgIdx + "|" + (string)gParentPageOffset, id);
                 return;
             }
 
@@ -987,6 +1233,184 @@ default
                     llLinksetDataWrite("lsd:titler:trinket_speed", spd);
                     llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
                     render_global_trinkets();
+                }
+                return;
+            }
+
+            if (gMenuContext == "msg_edit")
+            {
+                if (cmd == "Mᴏᴠᴇ..." || cmd == "Move...")
+                {
+                    gMenuContext = "msg_move";
+                    render_msg_move_menu();
+                    return;
+                }
+                if (cmd == "Cʜᴀɴɢᴇ Tᴇxᴛ" || cmd == "Change Text")
+                {
+                    gMenuContext = "textbox:msg_text";
+                    open_textbox("Enter new message text:");
+                    return;
+                }
+                if (cmd == "Dᴜʀᴀᴛɪᴏɴ" || cmd == "Duration")
+                {
+                    gMenuContext = "textbox:msg_dur";
+                    open_textbox("Enter display duration (or RANDOM):");
+                    return;
+                }
+                if (cmd == "Pʀᴇsᴇᴛs..." || cmd == "Presets...")
+                {
+                    gMenuContext = "presets";
+                    render_presets_menu();
+                    return;
+                }
+                if (cmd == "Pʀᴇᴠɪᴇᴡ" || cmd == "Preview")
+                {
+                    string preview_txt = llLinksetDataRead(get_msg_prefix(gActiveMsgIdx) + "text");
+                    llMessageLinked(LINK_SET, 182, preview_txt, NULL_KEY);
+                    render_msg_editor();
+                    return;
+                }
+                if (cmd == "Dᴇʟᴇᴛᴇ" || cmd == "Delete")
+                {
+                    integer count = (integer)llLinksetDataRead("lsd:titler:msg_count");
+                    clear_message_overrides(gActiveMsgIdx);
+                    integer i;
+                    for (i = gActiveMsgIdx; i < count - 1; ++i)
+                    {
+                        string next_pref = "lsd:titler:msg:" + (string)(i + 1) + ":";
+                        string curr_pref = "lsd:titler:msg:" + (string)i + ":";
+                        copy_msg(next_pref, curr_pref);
+                    }
+                    string last_pref = "lsd:titler:msg:" + (string)(count - 1) + ":";
+                    llLinksetDataDelete(last_pref + "text");
+                    llLinksetDataDelete(last_pref + "dur");
+                    clear_message_overrides(count - 1);
+                    llLinksetDataWrite("lsd:titler:msg_count", (string)(count - 1));
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "";
+                    if (gMenuListen != 0) { llListenRemove(gMenuListen); gMenuListen = 0; }
+                    llMessageLinked(LINK_SET, 189, "HANDOFF|messages|-1|" + (string)gParentPageOffset, id);
+                    return;
+                }
+                if (cmd == "Sᴇᴛ Fᴏɴᴛ" || cmd == "Set Font")
+                {
+                    gMenuContext = "fonts";
+                    render_fonts_menu();
+                    return;
+                }
+                if (cmd == "Tʀᴀɴs Iɴ..." || cmd == "Trans In...")
+                {
+                    gMenuContext = "before_fx";
+                    refresh_menu();
+                    return;
+                }
+                if (cmd == "Iᴅʟᴇ FX..." || cmd == "Idle FX...")
+                {
+                    gMenuContext = "during_fx";
+                    refresh_menu();
+                    return;
+                }
+                if (cmd == "Tʀᴀɴs Oᴜᴛ..." || cmd == "Trans Out...")
+                {
+                    gMenuContext = "after_fx";
+                    refresh_menu();
+                    return;
+                }
+                if (cmd == "Aᴘᴘᴇᴀʀ..." || cmd == "Appear...")
+                {
+                    gMenuContext = "appearance";
+                    refresh_menu();
+                    return;
+                }
+                return;
+            }
+
+            if (gMenuContext == "msg_move")
+            {
+                if (cmd == "▲ Mᴏᴠᴇ Uᴘ" || cmd == "Move Up")
+                {
+                    if (gActiveMsgIdx > 0)
+                    {
+                        move_message(gActiveMsgIdx, gActiveMsgIdx - 1);
+                        gActiveMsgIdx = gActiveMsgIdx - 1;
+                        llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    }
+                    else llOwnerSay("Message is already at the beginning.");
+                    render_msg_move_menu();
+                    return;
+                }
+                if (cmd == "Mᴏᴠᴇ Dᴏᴡɴ ▼" || cmd == "Move Down")
+                {
+                    integer count = (integer)llLinksetDataRead("lsd:titler:msg_count");
+                    if (gActiveMsgIdx < count - 1)
+                    {
+                        move_message(gActiveMsgIdx, gActiveMsgIdx + 1);
+                        gActiveMsgIdx = gActiveMsgIdx + 1;
+                        llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    }
+                    else llOwnerSay("Message is already at the end.");
+                    render_msg_move_menu();
+                    return;
+                }
+                if (cmd == "Mᴏᴠᴇ Tᴏ..." || cmd == "Move To...")
+                {
+                    gMenuContext = "textbox:msg_move_to";
+                    open_textbox("Enter target position (1 to " + llLinksetDataRead("lsd:titler:msg_count") + "):");
+                    return;
+                }
+                return;
+            }
+
+            if (gMenuContext == "presets")
+            {
+                string prefix = get_msg_prefix(gActiveMsgIdx);
+                if (cmd == "Cʏʙᴇʀ" || cmd == "Cyber")
+                {
+                    clear_message_overrides(gActiveMsgIdx);
+                    llLinksetDataWrite(prefix + "color", "<0.0, 1.0, 0.2>");
+                    llLinksetDataWrite(prefix + "trans_in", "MATRIX_VERT");
+                    llLinksetDataWrite(prefix + "trans_out", "MATRIX_VERT");
+                    llLinksetDataWrite(prefix + "trinket_style", "HEX");
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit"; render_msg_editor();
+                }
+                else if (cmd == "Pʀɪɴᴄᴇss" || cmd == "Princess")
+                {
+                    clear_message_overrides(gActiveMsgIdx);
+                    llLinksetDataWrite(prefix + "color", "<1.0, 0.4, 0.7>");
+                    llLinksetDataWrite(prefix + "trans_in", "FADE");
+                    llLinksetDataWrite(prefix + "trans_out", "FADE");
+                    llLinksetDataWrite(prefix + "trinket_style", "HEART");
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit"; render_msg_editor();
+                }
+                else if (cmd == "Tᴇʀᴍɪɴᴀʟ" || cmd == "Terminal")
+                {
+                    clear_message_overrides(gActiveMsgIdx);
+                    llLinksetDataWrite(prefix + "color", "<1.0, 1.0, 1.0>");
+                    llLinksetDataWrite(prefix + "trans_in", "TYPING");
+                    llLinksetDataWrite(prefix + "trans_out", "TYPING");
+                    llLinksetDataWrite(prefix + "trinket_style", "NONE");
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit"; render_msg_editor();
+                }
+                else if (cmd == "Gʟɪᴛᴄʜ" || cmd == "Glitch")
+                {
+                    clear_message_overrides(gActiveMsgIdx);
+                    llLinksetDataWrite(prefix + "color", "RANDOM");
+                    llLinksetDataWrite(prefix + "color_end", "RANDOM");
+                    llLinksetDataWrite(prefix + "color_trans", "RANDOM");
+                    llLinksetDataWrite(prefix + "trans_in", "GLITCH");
+                    llLinksetDataWrite(prefix + "trans_out", "GLITCH");
+                    llLinksetDataWrite(prefix + "flicker_glitch", "1");
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit"; render_msg_editor();
+                }
+                else if (cmd == "Rᴇsᴇᴛ" || cmd == "Reset")
+                {
+                    clear_message_overrides(gActiveMsgIdx);
+                    llMessageLinked(LINK_SET, 180, "RELOAD", NULL_KEY);
+                    gMenuContext = "msg_edit"; render_msg_editor();
                 }
                 return;
             }
